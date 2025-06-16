@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Empréstimo - Biblioteca Virtual</title>
+    <!-- Inclui a fonte Inter do Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Inclui o Tailwind CSS via CDN (para classes utilitárias) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link para o arquivo CSS externo -->
+    <link rel="stylesheet" href="/css/Emprestimo.css.css">
+</head>
+<body>
+<div class="container">
+    <h2>Registrar Empréstimo</h2>
+
+    <!-- Mensagens de sucesso/erro do Spring (Thymeleaf) -->
+    <div th:if="${message}" class="message success" th:text="${message}"></div>
+    <div th:if="${error}" class="message error" th:text="${error}"></div>
+
+    <form id="emprestimoForm" th:action="@{/emprestimos/registrar}" th:object="${criarEmprestimoRequest}" method="post">
+        <div class="form-group">
+            <label for="usuarioSelect">Usuário</label>
+            <select id="usuarioSelect" name="usuarioId" th:field="*{usuarioId}" required>
+                <option value="">Selecione um usuário</option>
+                <option th:each="usuario : ${usuarios}" th:value="${usuario.id}" th:text="${usuario.nome}"></option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="livroInput">Livro</label>
+            <div class="flex-row">
+                <input type="text" id="livroInput" placeholder="Digite o título do livro" list="livroSuggestions">
+                <datalist id="livroSuggestions">
+                    <!-- As sugestões serão preenchidas via JavaScript ou backend para autocomplete -->
+                </datalist>
+                <button type="button" id="adicionarLivroBtn" class="button-primary">Adicionar Livro</button>
+            </div>
+        </div>
+
+        <h3>Livros Selecionados</h3>
+        <table id="livrosSelecionadosTable">
+            <thead>
+            <tr>
+                <th>Título</th>
+                <th>Autor</th>
+                <th>Ano</th>
+                <th>Ação</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Linhas de livros selecionados serão adicionadas aqui via JavaScript -->
+            </tbody>
+        </table>
+        <!-- Campo oculto para enviar os IDs dos livros selecionados para o backend -->
+        <input type="hidden" id="selectedBookIds" name="livroIds" th:field="*{livroIds}" value="">
+
+        <div class="form-group" style="margin-top: 2rem; text-align: center;">
+            <button type="submit" class="button-primary" style="min-width: 200px;">Confirmar Empréstimo</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const livroInput = document.getElementById('livroInput');
+        const adicionarLivroBtn = document.getElementById('adicionarLivroBtn');
+        const livrosSelecionadosTableBody = document.querySelector('#livrosSelecionadosTable tbody');
+        const selectedBookIdsInput = document.getElementById('selectedBookIds');
+
+        let selectedBooks = []; // Array para armazenar livros selecionados {id, titulo, autor, anoPublicacao}
+
+        // Função para atualizar o campo oculto com os IDs dos livros
+        function updateSelectedBookIdsInput() {
+            selectedBookIdsInput.value = selectedBooks.map(book => book.id).join(',');
+        }
+
+        // Função para renderizar a tabela de livros selecionados
+        function renderSelectedBooks() {
+            livrosSelecionadosTableBody.innerHTML = ''; // Limpa a tabela
+            selectedBooks.forEach(book => {
+                const row = livrosSelecionadosTableBody.insertRow();
+                row.insertCell(0).textContent = book.titulo;
+                row.insertCell(1).textContent = book.autor;
+                row.insertCell(2).textContent = book.anoPublicacao;
+
+                const actionCell = row.insertCell(3);
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'Remover';
+                removeButton.className = 'button-danger';
+                removeButton.dataset.livroId = book.id; // Armazena o ID do livro no botão
+                removeButton.addEventListener('click', function() {
+                    // Remove o livro da lista de selecionados
+                    selectedBooks = selectedBooks.filter(b => b.id !== book.id);
+                    updateSelectedBookIdsInput();
+                    renderSelectedBooks(); // Renderiza a tabela novamente
+                });
+                actionCell.appendChild(removeButton);
+            });
+
+            // Se não houver livros, exibe uma mensagem
+            if (selectedBooks.length === 0) {
+                const row = livrosSelecionadosTableBody.insertRow();
+                const cell = row.insertCell(0);
+                cell.colSpan = 4;
+                cell.textContent = 'Nenhum livro selecionado.';
+                cell.style.textAlign = 'center';
+                cell.style.color = '#6B7280';
+                cell.style.padding = '2rem';
+            }
+        }
+
+        // Event listener para o botão "Adicionar Livro"
+        adicionarLivroBtn.addEventListener('click', async function() {
+            const tituloBusca = livroInput.value.trim();
+            if (tituloBusca === '') {
+                alert('Por favor, digite o título de um livro.');
+                return;
+            }
+
+            // Simulação de busca de livro no backend (você substituirá isso por uma chamada AJAX real)
+            // Neste exemplo, faremos uma chamada para o endpoint do controller que busca livros
+            try {
+                const response = await fetch(`/emprestimos/livros/buscar?titulo=${encodeURIComponent(tituloBusca)}`);
+                if (!response.ok) {
+                    throw new Error(`Erro ao buscar livro: ${response.statusText}`);
+                }
+                const livrosEncontrados = await response.json();
+
+                if (livrosEncontrados.length > 0) {
+                    // Para simplificar, adicionamos o primeiro livro encontrado
+                    const livroParaAdicionar = livrosEncontrados[0];
+
+                    // Verifica se o livro já está na lista
+                    if (!selectedBooks.some(book => book.id === livroParaAdicionar.id)) {
+                        selectedBooks.push(livroParaAdicionar);
+                        updateSelectedBookIdsInput();
+                        renderSelectedBooks();
+                        livroInput.value = ''; // Limpa o campo de input
+                    } else {
+                        alert('Este livro já foi adicionado.');
+                    }
+                } else {
+                    alert('Nenhum livro encontrado com este título.');
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar livro:', error);
+                alert('Erro ao adicionar livro. Verifique o console para mais detalhes.');
+            }
+        });
+
+        // Inicializa a tabela ao carregar a página
+        renderSelectedBooks();
+
+        // Tratamento de envio do formulário
+        document.getElementById('emprestimoForm').addEventListener('submit', function(event) {
+            // O Thymeleaf já deve preencher o campo 'livroIds' no POST,
+            // mas é bom garantir que o campo oculto está atualizado antes do envio final.
+            updateSelectedBookIdsInput();
+        });
+    });
+</script>
+</body>
+</html>
