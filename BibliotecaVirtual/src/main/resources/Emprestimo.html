@@ -4,18 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrar Empréstimo - Biblioteca Virtual</title>
-    <!-- Inclui a fonte Inter do Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Inclui o Tailwind CSS via CDN (para classes utilitárias) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Link para o arquivo CSS externo -->
-    <link rel="stylesheet" href="/css/Emprestimo.css.css">
+    <link rel="stylesheet" href="/css/Emprestimo.css">
 </head>
 <body>
 <div class="container">
     <h2>Registrar Empréstimo</h2>
 
-    <!-- Mensagens de sucesso/erro do Spring (Thymeleaf) -->
     <div th:if="${message}" class="message success" th:text="${message}"></div>
     <div th:if="${error}" class="message error" th:text="${error}"></div>
 
@@ -32,9 +28,7 @@
             <label for="livroInput">Livro</label>
             <div class="flex-row">
                 <input type="text" id="livroInput" placeholder="Digite o título do livro" list="livroSuggestions">
-                <datalist id="livroSuggestions">
-                    <!-- As sugestões serão preenchidas via JavaScript ou backend para autocomplete -->
-                </datalist>
+                <datalist id="livroSuggestions"></datalist>
                 <button type="button" id="adicionarLivroBtn" class="button-primary">Adicionar Livro</button>
             </div>
         </div>
@@ -50,10 +44,8 @@
             </tr>
             </thead>
             <tbody>
-            <!-- Linhas de livros selecionados serão adicionadas aqui via JavaScript -->
             </tbody>
         </table>
-        <!-- Campo oculto para enviar os IDs dos livros selecionados para o backend -->
         <input type="hidden" id="selectedBookIds" name="livroIds" th:field="*{livroIds}" value="">
 
         <div class="form-group" style="margin-top: 2rem; text-align: center;">
@@ -69,16 +61,14 @@
         const livrosSelecionadosTableBody = document.querySelector('#livrosSelecionadosTable tbody');
         const selectedBookIdsInput = document.getElementById('selectedBookIds');
 
-        let selectedBooks = []; // Array para armazenar livros selecionados {id, titulo, autor, anoPublicacao}
+        let selectedBooks = [];
 
-        // Função para atualizar o campo oculto com os IDs dos livros
         function updateSelectedBookIdsInput() {
             selectedBookIdsInput.value = selectedBooks.map(book => book.id).join(',');
         }
 
-        // Função para renderizar a tabela de livros selecionados
         function renderSelectedBooks() {
-            livrosSelecionadosTableBody.innerHTML = ''; // Limpa a tabela
+            livrosSelecionadosTableBody.innerHTML = '';
             selectedBooks.forEach(book => {
                 const row = livrosSelecionadosTableBody.insertRow();
                 row.insertCell(0).textContent = book.titulo;
@@ -89,17 +79,15 @@
                 const removeButton = document.createElement('button');
                 removeButton.textContent = 'Remover';
                 removeButton.className = 'button-danger';
-                removeButton.dataset.livroId = book.id; // Armazena o ID do livro no botão
+                removeButton.dataset.livroId = book.id;
                 removeButton.addEventListener('click', function() {
-                    // Remove o livro da lista de selecionados
                     selectedBooks = selectedBooks.filter(b => b.id !== book.id);
                     updateSelectedBookIdsInput();
-                    renderSelectedBooks(); // Renderiza a tabela novamente
+                    renderSelectedBooks();
                 });
                 actionCell.appendChild(removeButton);
             });
 
-            // Se não houver livros, exibe uma mensagem
             if (selectedBooks.length === 0) {
                 const row = livrosSelecionadosTableBody.insertRow();
                 const cell = row.insertCell(0);
@@ -111,7 +99,6 @@
             }
         }
 
-        // Event listener para o botão "Adicionar Livro"
         adicionarLivroBtn.addEventListener('click', async function() {
             const tituloBusca = livroInput.value.trim();
             if (tituloBusca === '') {
@@ -119,8 +106,6 @@
                 return;
             }
 
-            // Simulação de busca de livro no backend (você substituirá isso por uma chamada AJAX real)
-            // Neste exemplo, faremos uma chamada para o endpoint do controller que busca livros
             try {
                 const response = await fetch(`/emprestimos/livros/buscar?titulo=${encodeURIComponent(tituloBusca)}`);
                 if (!response.ok) {
@@ -129,15 +114,13 @@
                 const livrosEncontrados = await response.json();
 
                 if (livrosEncontrados.length > 0) {
-                    // Para simplificar, adicionamos o primeiro livro encontrado
                     const livroParaAdicionar = livrosEncontrados[0];
 
-                    // Verifica se o livro já está na lista
                     if (!selectedBooks.some(book => book.id === livroParaAdicionar.id)) {
                         selectedBooks.push(livroParaAdicionar);
                         updateSelectedBookIdsInput();
                         renderSelectedBooks();
-                        livroInput.value = ''; // Limpa o campo de input
+                        livroInput.value = '';
                     } else {
                         alert('Este livro já foi adicionado.');
                     }
@@ -150,13 +133,9 @@
             }
         });
 
-        // Inicializa a tabela ao carregar a página
         renderSelectedBooks();
 
-        // Tratamento de envio do formulário
         document.getElementById('emprestimoForm').addEventListener('submit', function(event) {
-            // O Thymeleaf já deve preencher o campo 'livroIds' no POST,
-            // mas é bom garantir que o campo oculto está atualizado antes do envio final.
             updateSelectedBookIdsInput();
         });
     });
